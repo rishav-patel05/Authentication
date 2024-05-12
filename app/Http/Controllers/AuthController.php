@@ -1,22 +1,40 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User; // If you're using User model
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 
 class AuthController extends Controller
 {
-    public function login(){
-        return view("auth.login");
-        
-        
+
+    public function home(){
+        $data = Auth::user();
+        return view('auth.home', ['data' => $data]);
     }
-    public function registration(){
-        return view("auth.registration");
+    
+    public function login(){
+        if (Auth::check()) {
+            return redirect()->route('home'); // Redirect to home if already logged in
+        }
+        return view('auth.login');
+    }
+    
+    public function loginuser(Request $request){
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|min:8',
+        ]);
+    
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            return redirect()->route('home')->with('success', 'Login successful');
+        } else {
+            return back()->with('fail', 'Incorrect email or password');
+        }
     }
     public function registeruser(Request $request){
         $request -> validate([
@@ -40,35 +58,12 @@ class AuthController extends Controller
         }
      
     }
-    public function loginuser(Request $request){
-        $request -> validate([
-            'email'=> 'required|email',
-            'password'=> 'required|min:8',
-        ]);
-        $user = User::where('email','=',$request->email)->first();
-        if($user){
-            if(Hash::check($request->password,$user->password)){
-                $request->session()->put('loginid',$user->id);
-                return redirect('home');
-            }else{
-                return back()->with('fail','Password Incorrect');
-            }
-        }else{
-            return back()->with('fail','Email Doesnt Exist');
-        }
-    }
-    public function home(){
-        $data = array ();
-        if(Session::has('loginid')){
-            $user = User::where('id','=',Session::get('loginid'))->first();
-        }
-        return view('auth.home',['data' => $user]);
-    }
+
     public function logout(){
-        if(Session::has('loginid')){
-            Session::pull('loginid');
-            return redirect('login');
-        }
+        Auth::logout(); // Logout the user
+        Session::forget('loginid'); // Clear login session data
+    
+        return redirect('/home')->with('success', 'You have been logged out successfully.');
     }
 #-----------------------------CRUD OPERATIONS---------------------------------------------------------------
     public function records(){
@@ -101,35 +96,37 @@ class AuthController extends Controller
 
 // -----------------------Change password-------------------------
 public function showChangePasswordForm()
-{
-    return view('auth.change-password');
-}
-
-public function changePassword(Request $request)
-{
-    // Correct validation rule
-    $request->validate([
-        'email' => 'required|email',
-        'user_id' => 'required|integer',
-        'old_password' => 'required',
-        'new_password' => 'required|min:8', // Use 'min' for minimum length
-    ]);
-
-    // Retrieve user from the database
-    $user = User::where('email', $request->email)
-                ->where('id', $request->user_id)
-                ->first();
-
-    if ($user && Hash::check($request->old_password, $user->password)) {
-        // Change the password
-        $user->password = Hash::make($request->new_password);
-        $user->save();
-
-        Session::flash('success', 'Password changed successfully!');
-        return redirect()->back(); // Redirect back with success message
-    } else {
-        Session::flash('fail', 'Invalid email, user ID, or old password.');
-        return redirect()->back(); // Redirect back with failure message
+    {
+        return view('auth.change-password');
     }
-}
+
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'user_id' => 'required|integer',
+            'old_password' => 'required',
+            'new_password' => 'required|min:8',
+            'confirm_password' => 'required|same:new_password',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $user = User::where('email', $request->email)
+                    ->where('id', $request->user_id)
+                    ->first();
+
+        if ($user && Hash::check($request->old_password, $user->password)) {
+            $user->password = Hash::make($request->new_password);
+            $user->save();
+
+            Session::flash('success', 'Password changed successfully!');
+            return redirect()->back();
+        } else {
+            Session::flash('fail', 'Invalid email, user ID, or old password.');
+            return redirect()->back();
+        }
+    }
 }
