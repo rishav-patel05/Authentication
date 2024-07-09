@@ -36,6 +36,9 @@ class AuthController extends Controller
             return back()->with('fail', 'Incorrect email or password');
         }
     }
+    public function registration(){
+        return view("auth.registration");
+    }
     public function registeruser(Request $request){
         $request -> validate([
             'name'=> 'required',
@@ -58,6 +61,8 @@ class AuthController extends Controller
         }
      
     }
+
+    
 
     public function logout(){
         Auth::logout(); // Logout the user
