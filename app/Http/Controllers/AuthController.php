@@ -109,7 +109,6 @@ public function showChangePasswordForm()
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'user_id' => 'required|integer',
             'old_password' => 'required',
             'new_password' => 'required|min:8',
             'confirm_password' => 'required|same:new_password',
@@ -120,7 +119,6 @@ public function showChangePasswordForm()
         }
 
         $user = User::where('email', $request->email)
-                    ->where('id', $request->user_id)
                     ->first();
 
         if ($user && Hash::check($request->old_password, $user->password)) {
@@ -130,7 +128,7 @@ public function showChangePasswordForm()
             Session::flash('success', 'Password changed successfully!');
             return redirect()->back();
         } else {
-            Session::flash('fail', 'Invalid email, user ID, or old password.');
+            Session::flash('fail', 'Invalid email or old password.');
             return redirect()->back();
         }
     }

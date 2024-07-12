@@ -74,9 +74,6 @@
     <label for="email">Email:</label>
     <input type="email" id="email" name="email" value="{{ old('email') }}" required>
 
-    <label for="user_id">User ID:</label>
-    <input type="number" id="user_id" name="user_id" value="{{ old('user_id') }}" required>
-
     <label for="old_password">Old Password:</label>
     <input type="password" id="old_password" name="old_password" required>
 
